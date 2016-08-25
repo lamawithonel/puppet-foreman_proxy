@@ -1,7 +1,7 @@
 # Install the foreman proxy
 class foreman_proxy::install {
   if ! $foreman_proxy::custom_repo {
-    foreman::install::repos { 'foreman_proxy':
+    foreman::repos { 'foreman_proxy':
       repo     => $foreman_proxy::repo,
       gpgcheck => $foreman_proxy::gpgcheck,
     }
@@ -9,7 +9,7 @@ class foreman_proxy::install {
 
   $repo = $foreman_proxy::custom_repo ? {
     true    => [],
-    default => Foreman::Install::Repos['foreman_proxy'],
+    default => Foreman::Repos['foreman_proxy'],
   }
 
   package {'foreman-proxy':
@@ -18,14 +18,11 @@ class foreman_proxy::install {
   }
 
   if $foreman_proxy::register_in_foreman {
-    package { $foreman_proxy::params::foreman_api_package:
-      ensure  => present,
-      require => $repo,
-    }
+    include ::foreman::providers
+    $repo -> Class['foreman::providers'] -> anchor { 'foreman_proxy::install_end': }
   }
 
   if $foreman_proxy::bmc and $foreman_proxy::bmc_default_provider != 'shell' {
-    ensure_packages([$foreman_proxy::bmc_default_provider])
+    ensure_packages([$foreman_proxy::bmc_default_provider], { ensure => $foreman_proxy::ensure_packages_version, })
   }
-
 }

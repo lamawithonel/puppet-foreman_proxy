@@ -2,12 +2,9 @@ require 'spec_helper'
 
 describe 'foreman_proxy::plugin::salt' do
 
-  let :facts do {
-    :osfamily               => 'RedHat',
-    :operatingsystem        => 'CentOS',
-    :operatingsystemrelease => '6.5',
-    :fqdn                   => 'my.host.example.com',
-  } end
+  let :facts do
+    on_supported_os['redhat-6-x86_64']
+  end
 
   describe 'with default settings' do
     let :pre_condition do
@@ -34,12 +31,22 @@ describe 'foreman_proxy::plugin::salt' do
     let :params do {
       :user          => 'example',
       :autosign_file => '/etc/salt/example.conf',
+      :api           => true,
+      :api_url       => 'http://foreman.example.com',
+      :api_auth      => 'ldap',
+      :api_username  => 'saltapi',
+      :api_password  => 'letmein',
     } end
 
     it 'should change salt.yml parameters' do
       should contain_file('/etc/foreman-proxy/settings.d/salt.yml').
         with_content(/:salt_command_user: example/).
-        with_content(/:autosign_file: \/etc\/salt\/example.conf/)
+        with_content(/:autosign_file: \/etc\/salt\/example.conf/).
+        with_content(/:use_api: true/).
+        with_content(/:api_url: http:\/\/foreman.example.com/).
+        with_content(/:api_auth: ldap/).
+        with_content(/:api_username: saltapi/).
+        with_content(/:api_password: letmein/)
     end
   end
 

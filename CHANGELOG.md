@@ -1,8 +1,119 @@
 # Changelog
 
+## 3.0.0
+* New or changed parameters:
+    * Add dhcp_subnets parameter
+    * Add dhcp_search_domains parameter (is relayed to dhcp::pool)
+    * Add ensure_packages_version parameter for extra packages, can be set to
+      'installed', 'present', 'latest' or 'absent'
+    * Add libvirt_backend, set to 'virsh' for 1.11 compatibility
+    * Add mcollective_user parameter
+    * Add puppet_split_config_files parameter, set to false for 1.11
+      compatibility
+    * Add ssl_disabled_ciphers parameter for usage with 1.12 or later
+    * Add tftp_managed parameter. If set to false, theforeman-tftp is not used
+    * Rename virsh_network to libvirt_network
+    * Remove autosign_location parameter, note that `#{puppetdir}/autosign.conf`
+      is used in the proxy code itself for the path.
+    * Remove puppet_cache_location parameter, no longer used by the smart proxy
+    * Remove deprecated parameters for 1.10 and older
+* New or changed parameters on smart proxy plugin classes:
+    * Add contentdir, reportsdir, failed_dir and configure_openscap_repo to
+      openscap class
+* Other changes and fixes:
+    * Use foreman::providers to install foreman_smartproxy dependencies
+    * Pass ssl_ca to foreman_smartproxy for rest_v3 provider compatibility
+    * Change default log level to INFO
+    * Copy mboot.c32 for TFTP proxies
+    * Fix ordering of Puppet server installation before proxy user (#14942)
+* Compatibility warnings:
+    * Removed support for Smart Proxy 1.10 and older, 1.11+ is required
+    * Change puppetrun and puppetrun_listen_on parameters to puppet and
+      puppet_listen_on respectively
+    * 1.11 users must set `puppet_split_config_files => false` with Puppet
+
+## 2.5.0
+* New or changed parameters:
+    * Add dhcp_split_config_files parameter, set to false for 1.10 or prior
+      compatibility
+    * Add dhcp_provider parameter to replace dhcp_vendor (deprecated)
+    * Add logs, logs_listen_on parameters to manage new logs smart proxy module
+    * Add log_buffer, log_buffer_errors parameters
+    * Add tftp_manage_wget parameter to disable wget installation
+* New classes to install smart proxy plugins:
+    * foreman_proxy::plugin::discovery to install Discovery support
+* New or changed parameters on smart proxy plugin classes:
+    * Warning: removed ssh_user parameter from remote_execution plugin, the user
+      is controlled from the Foreman plugin
+    * Add local_working_dir, remote_working_dir parameters to remote_execution
+      plugin
+    * Add version parameter to openscap plugin
+    * Add pulp_dir, pulp_content_dir, mongodb_dir parameters to pulp plugin
+    * Add database_path, console_auth parameters to dynflow plugin
+* Other changes and fixes:
+    * Support Puppet 3.0 minimum
+    * Support Fedora 21, remove Debian 6 (Squeeze), add Ubuntu 16.04
+    * Create TFTP directories for ZTP and POAP files (#13024)
+    * Use lower case FQDN to access Puppet SSL certificates (#8389)
+    * Fix Puppet SSL directory under Puppet 4
+    * Fix proxy registration URL take current ssl_port parameter value
+    * Fix kafo data type on generate_keys parameter (#12988)
+    * Refresh log/log_level parameter documentation
+
+## 2.4.2
+* Fix path to dhcpd.conf on FreeBSD
+
+## 2.4.1
+* Fix DNS providers under 1.10 to have "dns_" prefix (#12157)
+* Fix missing kafo data type on powerdns::manage_database parameter
+* Test speed improvements
+
+## 2.4.0
+* New or changed parameters:
+    * Add dns_split_config_files parameter, set to false for 1.9 or prior
+      compatibility
+    * Add dhcp_server parameter for address of the DHCP server (1.10+)
+* Other changes and fixes:
+    * Support and test module under Puppet 4
+    * Support version 1.10 with split DNS configuration files
+    * Add FreeBSD support
+    * Add foreman_proxy::plugin::remote_execution::ssh and
+      foreman_proxy::plugin::dynflow plugin classes
+    * Add foreman_proxy::plugin::dns::powerdns plugin class
+    * Pass dhcp_key_name and secret to DHCP module OMAPI parameters
+    * Replace random_password/cache_data from theforeman/foreman with
+      puppet/extlib
+
+## 2.3.0
+* New or changed parameters:
+    * Add puppet\_use\_cache/puppet\_cache\_location parameters to control
+      caching functions of the 'puppet' module
+    * Add new api\_* parameters to foreman_proxy::plugin::salt for its access
+      to the Salt API (#8473)
+    * Add bind\_host parameter for smart proxy bind IP/host in 1.8+
+    * Add salt\_puppetrun\_cmd parameter to change Salt command used for
+      Puppet runs in 1.8+
+    * Add dhcp\_omapi\_port parameter to control the OMAPI port used for ISC
+      dhcpd management in 1.9+
+* Other changes and fixes:
+    * Mark support for new theforeman releases using puppetlabs/concat
+
+## 2.2.3
+* Don't configure dns_key if nsupdate_gss is used (#10436)
+* Copy libutil.c32 PXELinux 6 file on Debian 8/Jessie (#10255)
+
+## 2.2.2
+* Copy ldlinux.c32 PXELinux 6 file on Debian 8/Jessie (#10255)
+* Change tftp_servername parameter default to undef (#9896)
+
+## 2.2.1
+* Fix template variable lookups under the future parser
+* Replace private() for future parser compatibility
+
 ## 2.2.0
 * New classes to install smart proxy plugins:
     * foreman_proxy::plugin::abrt to install ABRT support
+    * foreman_proxy::plugin::chef to install Chef support
     * foreman_proxy::plugin::openscap to install OpenSCAP support
     * foreman_proxy::plugin::salt for Salt management support
 * New or changed parameters:

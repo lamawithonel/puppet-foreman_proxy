@@ -8,7 +8,12 @@ class foreman_proxy::config {
     Class['puppet::server::config'] ~> Class['foreman_proxy::service']
   }
 
-  if $foreman_proxy::puppetca { include ::foreman_proxy::puppetca }
+  # Ensure 'puppet' user group is present before managing proxy user
+  # Relationship is duplicated there as defined() is parse-order dependent
+  if defined(Class['puppet::server::install']) {
+    Class['puppet::server::install'] -> Class['foreman_proxy::config']
+  }
+
   if $foreman_proxy::tftp     { include ::foreman_proxy::tftp }
 
   # Somehow, calling these DHCP and DNS seems to conflict. So, they get a prefix...
@@ -24,7 +29,7 @@ class foreman_proxy::config {
 
   user { $foreman_proxy::user:
     ensure  => 'present',
-    shell   => '/bin/false',
+    shell   => $::foreman_proxy::shell,
     comment => 'Foreman Proxy account',
     groups  => $groups,
     home    => $foreman_proxy::dir,
@@ -33,7 +38,7 @@ class foreman_proxy::config {
   }
 
   foreman_proxy::settings_file { 'settings':
-    path   => '/etc/foreman-proxy/settings.yml',
+    path   => "${::foreman_proxy::etc}/foreman-proxy/settings.yml",
     module => false,
   }
 
@@ -45,13 +50,33 @@ class foreman_proxy::config {
     enabled   => $::foreman_proxy::dhcp,
     listen_on => $::foreman_proxy::dhcp_listen_on,
   }
+  foreman_proxy::settings_file { 'dhcp_isc':
+    module => false,
+  }
   foreman_proxy::settings_file { 'dns':
     enabled   => $::foreman_proxy::dns,
     listen_on => $::foreman_proxy::dns_listen_on,
   }
+  foreman_proxy::settings_file { ['dns_nsupdate', 'dns_nsupdate_gss']:
+    module => false,
+  }
+  foreman_proxy::settings_file { ['dns_libvirt', 'dhcp_libvirt']:
+    module => false,
+  }
   foreman_proxy::settings_file { 'puppet':
-    enabled   => $::foreman_proxy::puppetrun,
-    listen_on => $::foreman_proxy::puppetrun_listen_on,
+    enabled   => $::foreman_proxy::puppet,
+    listen_on => $::foreman_proxy::puppet_listen_on,
+  }
+  foreman_proxy::settings_file { [
+    'puppet_proxy_customrun',
+    'puppet_proxy_legacy',
+    'puppet_proxy_mcollective',
+    'puppet_proxy_puppet_api',
+    'puppet_proxy_puppetrun',
+    'puppet_proxy_salt',
+    'puppet_proxy_ssh',
+  ]:
+    module => false,
   }
   foreman_proxy::settings_file { 'puppetca':
     enabled   => $::foreman_proxy::puppetca,
@@ -69,27 +94,51 @@ class foreman_proxy::config {
     enabled   => $::foreman_proxy::templates,
     listen_on => $::foreman_proxy::templates_listen_on,
   }
+  foreman_proxy::settings_file { 'logs':
+    enabled   => $::foreman_proxy::logs,
+    listen_on => $::foreman_proxy::logs_listen_on,
+  }
 
-  if $foreman_proxy::puppetca or $foreman_proxy::puppetrun {
+  if $foreman_proxy::puppetca or $foreman_proxy::puppet {
     if $foreman_proxy::use_sudoersd {
       if $foreman_proxy::manage_sudoersd {
-        file { '/etc/sudoers.d':
+        file { "${::foreman_proxy::sudoers}.d":
           ensure => directory,
         }
       }
 
-      file { '/etc/sudoers.d/foreman-proxy':
+      file { "${::foreman_proxy::sudoers}.d/foreman-proxy":
         ensure  => file,
         owner   => 'root',
-        group   => 'root',
+        group   => 0,
         mode    => '0440',
         content => template('foreman_proxy/sudo.erb'),
-        require => File['/etc/sudoers.d'],
       }
     } else {
       augeas { 'sudo-foreman-proxy':
-        context => '/files/etc/sudoers',
+        context => "/files${::foreman_proxy::sudoers}",
         changes => template('foreman_proxy/sudo_augeas.erb'),
+      }
+    }
+  } else {
+    # The puppet-agent (puppet 4 AIO package) doesn't create a puppet user and group
+    # but the foreman proxy still needs to be able to read the agent's private key
+    if $foreman_proxy::manage_puppet_group and $foreman_proxy::ssl {
+      if !defined(Group[$foreman_proxy::puppet_group]) {
+        group { $foreman_proxy::puppet_group:
+          ensure => 'present',
+          before => User[$foreman_proxy::user],
+        }
+      }
+      $ssl_dirs_and_files = [
+        $foreman_proxy::ssldir,
+        "${foreman_proxy::ssldir}/private_keys",
+        $foreman_proxy::ssl_ca,
+        $foreman_proxy::ssl_key,
+        $foreman_proxy::ssl_cert,
+      ]
+      file { $ssl_dirs_and_files:
+        group => $foreman_proxy::puppet_group,
       }
     }
   }

@@ -15,11 +15,13 @@
 # $version::                    foreman package version, it's passed to ensure parameter of package resource
 #                               can be set to specific version number, 'latest', 'present' etc.
 #
+# $ensure_packages_version::    control extra packages version, it's passed to ensure parameter of package resource
+#                               can be set to 'installed', 'present', 'latest', 'absent'
+#
 # $plugin_version::             foreman plugins version, it's passed to ensure parameter of plugins package resource
 #                               can be set to 'latest', 'present',  'installed', 'absent'.
 #
-# $port::                       Port to listen on (deprecated in favor of $ssl_port and $http_port)
-#                               type:integer
+# $bind_host::                  Host to bind ports to, e.g. *, localhost, 0.0.0.0
 #
 # $http::                       Enable HTTP
 #                               type:boolean
@@ -37,9 +39,15 @@
 #
 # $user::                       User under which foreman proxy will run
 #
-# $log::                        Foreman proxy log file
+# $log::                        Foreman proxy log file, 'STDOUT' or 'SYSLOG'
 #
-# $log_level::                  Foreman proxy log level, e.g. INFO, DEBUG, FATAL etc.
+# $log_level::                  Foreman proxy log level: WARN, DEBUG, ERROR, FATAL, INFO, UNKNOWN
+#
+# $log_buffer::                 Log buffer size
+#                               type:integer
+#
+# $log_buffer_errors::          Additional log buffer size for errors
+#                               type:integer
 #
 # $ssl_ca::                     SSL CA to validate the client certificates used to access the proxy
 #
@@ -55,6 +63,9 @@
 #
 # $foreman_ssl_key::            Corresponding key to a foreman_ssl_cert certificate
 #                               When not specified, the ssl_key is used instead.
+#
+# $ssl_disabled_ciphers::       List of OpenSSL cipher suite names that will be disabled from the default
+#                               type:array
 #
 # $trusted_hosts::              Only hosts listed will be permitted, empty array to disable authorization
 #                               type:array
@@ -75,24 +86,28 @@
 #
 # $puppetdir::                  Puppet var directory
 #
-# $autosign_location::          Path to autosign configuration file
-#
 # $puppetca_cmd::               Puppet CA command to be allowed in sudoers
 #
 # $puppet_group::               Groups of Foreman proxy user
 #
-# $puppetrun::                  Enable puppet run/kick feature
+# $manage_puppet_group::        Whether to ensure the $puppet_group exists.  Also ensures group owner of ssl keys and certs is $puppet_group
+#                               Not applicable when ssl is false.
 #                               type:boolean
 #
-# $puppetrun_listen_on::        Puppet run proxy to listen on https, http, or both
+# $puppet::                     Enable Puppet module for environment imports and Puppet runs
+#                               type:boolean
 #
-# $puppetrun_provider::         Set puppet_provider to handle puppet run/kick via mcollective
+# $puppet_listen_on::           Puppet feature to listen on https, http, or both
+#
+# $puppetrun_provider::         Provider for running/kicking Puppet agents
 #
 # $puppetrun_cmd::              Puppet run/kick command to be allowed in sudoers
 #
 # $customrun_cmd::              Puppet customrun command
 #
 # $customrun_args::             Puppet customrun command arguments
+#
+# $mcollective_user::           The user for puppetrun_provider mcollective
 #
 # $puppetssh_sudo::             Whether to use sudo before commands when using puppetrun_provider puppetssh
 #                               type:boolean
@@ -106,6 +121,8 @@
 # $puppetssh_wait::             Whether to wait for completion of the Puppet command over SSH and return
 #                               the exit code
 #                               type:boolean
+#
+# $salt_puppetrun_cmd::         Salt command to trigger Puppet run
 #
 # $puppet_user::                Which user to invoke sudo as to run puppet commands
 #
@@ -128,16 +145,21 @@
 #
 # $template_url::               URL a client should use for provisioning templates
 #
+# $logs::                       Enable Logs (log buffer) feature
+#                               type:boolean
+#
+# $logs_listen_on::             Logs proxy to listen on https, http, or both
+#
 # $tftp::                       Enable TFTP feature
 #                               type:boolean
 #
 # $tftp_listen_on::             TFTP proxy to listen on https, http, or both
 #
-# $tftp_syslinux_root::         Directory that hold syslinux files (deprecated, see $tftp_syslinux_filenames)
+# $tftp_managed::               TFTP is managed by Foreman proxy
+#                               type:boolean
 #
-# $tftp_syslinux_files::        Syslinux files to install on TFTP (copied from $tftp_syslinux_root,
-#                               deprecated, see $tftp_syslinux_filenames)
-#                               type:array
+# $tftp_manage_wget::           If enabled will install the wget package
+#                               type:boolean
 #
 # $tftp_syslinux_filenames::    Syslinux files to install on TFTP (full paths)
 #                               type:array
@@ -157,7 +179,15 @@
 # $dhcp_managed::               DHCP is managed by Foreman proxy
 #                               type:boolean
 #
+# $dhcp_provider::              DHCP provider
+#
+# $dhcp_subnets::               Subnets list to restrict DHCP management to
+#                               type:array
+#
 # $dhcp_option_domain::         DHCP use the dhcpd config option domain-name
+#                               type:array
+#
+# $dhcp_search_domains::        DHCP search domains option
 #                               type:array
 #
 # $dhcp_interface::             DHCP listen interface
@@ -168,7 +198,7 @@
 #
 # $dhcp_nameservers::           DHCP nameservers
 #
-# $dhcp_vendor::                DHCP vendor
+# $dhcp_server::                Address of DHCP server to manage
 #
 # $dhcp_config::                DHCP config file path
 #
@@ -177,6 +207,9 @@
 # $dhcp_key_name::              DHCP key name
 #
 # $dhcp_key_secret::            DHCP password
+#
+# $dhcp_omapi_port::            DHCP server OMAPI port
+#                               type:integer
 #
 # $dns::                        Enable DNS feature
 #                               type:boolean
@@ -205,7 +238,9 @@
 # $dns_forwarders::             DNS forwarders
 #                               type:array
 #
-# $virsh_network::              Network for virsh DNS/DHCP provider
+# $libvirt_connection::         Connection string of libvirt DNS/DHCP provider (e.g. "qemu:///system")
+#
+# $libvirt_network::            Network for libvirt DNS/DHCP provider
 #
 # $bmc::                        Enable BMC feature
 #                               type:boolean
@@ -245,19 +280,25 @@
 #
 # $oauth_consumer_secret::      OAuth secret to be used for REST interaction
 #
+# $puppet_use_cache::           Whether to enable caching of puppet classes
+#                               type:boolean
+#
 class foreman_proxy (
   $repo                       = $foreman_proxy::params::repo,
   $gpgcheck                   = $foreman_proxy::params::gpgcheck,
   $custom_repo                = $foreman_proxy::params::custom_repo,
   $version                    = $foreman_proxy::params::version,
+  $ensure_packages_version    = $foreman_proxy::params::ensure_packages_version,
   $plugin_version             = $foreman_proxy::params::plugin_version,
-  $port                       = $foreman_proxy::params::port,
+  $bind_host                  = $foreman_proxy::params::bind_host,
   $http_port                  = $foreman_proxy::params::http_port,
   $ssl_port                   = $foreman_proxy::params::ssl_port,
   $dir                        = $foreman_proxy::params::dir,
   $user                       = $foreman_proxy::params::user,
   $log                        = $foreman_proxy::params::log,
   $log_level                  = $foreman_proxy::params::log_level,
+  $log_buffer                 = $foreman_proxy::params::log_buffer,
+  $log_buffer_errors          = $foreman_proxy::params::log_buffer_errors,
   $http                       = $foreman_proxy::params::http,
   $ssl                        = $foreman_proxy::params::ssl,
   $ssl_ca                     = $foreman_proxy::params::ssl_ca,
@@ -267,26 +308,29 @@ class foreman_proxy (
   $foreman_ssl_cert           = $foreman_proxy::params::foreman_ssl_cert,
   $foreman_ssl_key            = $foreman_proxy::params::foreman_ssl_key,
   $trusted_hosts              = $foreman_proxy::params::trusted_hosts,
+  $ssl_disabled_ciphers       = $foreman_proxy::params::ssl_disabled_ciphers,
   $manage_sudoersd            = $foreman_proxy::params::manage_sudoersd,
   $use_sudoersd               = $foreman_proxy::params::use_sudoersd,
   $puppetca                   = $foreman_proxy::params::puppetca,
   $puppetca_listen_on         = $foreman_proxy::params::puppetca_listen_on,
   $ssldir                     = $foreman_proxy::params::ssldir,
   $puppetdir                  = $foreman_proxy::params::puppetdir,
-  $autosign_location          = $foreman_proxy::params::autosign_location,
   $puppetca_cmd               = $foreman_proxy::params::puppetca_cmd,
   $puppet_group               = $foreman_proxy::params::puppet_group,
-  $puppetrun                  = $foreman_proxy::params::puppetrun,
-  $puppetrun_listen_on        = $foreman_proxy::params::puppetrun_listen_on,
+  $manage_puppet_group        = $foreman_proxy::params::manage_puppet_group,
+  $puppet                     = $foreman_proxy::params::puppet,
+  $puppet_listen_on           = $foreman_proxy::params::puppet_listen_on,
   $puppetrun_cmd              = $foreman_proxy::params::puppetrun_cmd,
   $puppetrun_provider         = $foreman_proxy::params::puppetrun_provider,
   $customrun_cmd              = $foreman_proxy::params::customrun_cmd,
   $customrun_args             = $foreman_proxy::params::customrun_args,
+  $mcollective_user           = $foreman_proxy::params::mcollective_user,
   $puppetssh_sudo             = $foreman_proxy::params::puppetssh_sudo,
   $puppetssh_command          = $foreman_proxy::params::puppetssh_command,
   $puppetssh_user             = $foreman_proxy::params::puppetssh_user,
   $puppetssh_keyfile          = $foreman_proxy::params::puppetssh_keyfile,
   $puppetssh_wait             = $foreman_proxy::params::puppetssh_wait,
+  $salt_puppetrun_cmd         = $foreman_proxy::params::salt_puppetrun_cmd,
   $puppet_user                = $foreman_proxy::params::puppet_user,
   $puppet_url                 = $foreman_proxy::params::puppet_url,
   $puppet_ssl_ca              = $foreman_proxy::params::ssl_ca,
@@ -296,10 +340,12 @@ class foreman_proxy (
   $templates                  = $foreman_proxy::params::templates,
   $templates_listen_on        = $foreman_proxy::params::templates_listen_on,
   $template_url               = $foreman_proxy::params::template_url,
+  $logs                       = $foreman_proxy::params::logs,
+  $logs_listen_on             = $foreman_proxy::params::logs_listen_on,
   $tftp                       = $foreman_proxy::params::tftp,
   $tftp_listen_on             = $foreman_proxy::params::tftp_listen_on,
-  $tftp_syslinux_root         = $foreman_proxy::params::tftp_syslinux_root,
-  $tftp_syslinux_files        = $foreman_proxy::params::tftp_syslinux_files,
+  $tftp_managed               = $foreman_proxy::params::tftp_managed,
+  $tftp_manage_wget           = $foreman_proxy::params::tftp_manage_wget,
   $tftp_syslinux_filenames    = $foreman_proxy::params::tftp_syslinux_filenames,
   $tftp_root                  = $foreman_proxy::params::tftp_root,
   $tftp_dirs                  = $foreman_proxy::params::tftp_dirs,
@@ -307,16 +353,20 @@ class foreman_proxy (
   $dhcp                       = $foreman_proxy::params::dhcp,
   $dhcp_listen_on             = $foreman_proxy::params::dhcp_listen_on,
   $dhcp_managed               = $foreman_proxy::params::dhcp_managed,
+  $dhcp_provider              = $foreman_proxy::params::dhcp_provider,
+  $dhcp_subnets               = $foreman_proxy::params::dhcp_subnets,
   $dhcp_option_domain         = $foreman_proxy::params::dhcp_option_domain,
+  $dhcp_search_domains        = $foreman_proxy::params::dhcp_search_domains,
   $dhcp_interface             = $foreman_proxy::params::dhcp_interface,
   $dhcp_gateway               = $foreman_proxy::params::dhcp_gateway,
   $dhcp_range                 = $foreman_proxy::params::dhcp_range,
   $dhcp_nameservers           = $foreman_proxy::params::dhcp_nameservers,
-  $dhcp_vendor                = $foreman_proxy::params::dhcp_vendor,
+  $dhcp_server                = $foreman_proxy::params::dhcp_server,
   $dhcp_config                = $foreman_proxy::params::dhcp_config,
   $dhcp_leases                = $foreman_proxy::params::dhcp_leases,
   $dhcp_key_name              = $foreman_proxy::params::dhcp_key_name,
   $dhcp_key_secret            = $foreman_proxy::params::dhcp_key_secret,
+  $dhcp_omapi_port            = $foreman_proxy::params::dhcp_omapi_port,
   $dns                        = $foreman_proxy::params::dns,
   $dns_listen_on              = $foreman_proxy::params::dns_listen_on,
   $dns_managed                = $foreman_proxy::params::dns_managed,
@@ -329,7 +379,8 @@ class foreman_proxy (
   $dns_tsig_keytab            = $foreman_proxy::params::dns_tsig_keytab,
   $dns_tsig_principal         = $foreman_proxy::params::dns_tsig_principal,
   $dns_forwarders             = $foreman_proxy::params::dns_forwarders,
-  $virsh_network              = $foreman_proxy::params::virsh_network,
+  $libvirt_network            = $foreman_proxy::params::libvirt_network,
+  $libvirt_connection         = $foreman_proxy::params::libvirt_connection,
   $bmc                        = $foreman_proxy::params::bmc,
   $bmc_listen_on              = $foreman_proxy::params::bmc_listen_on,
   $bmc_default_provider       = $foreman_proxy::params::bmc_default_provider,
@@ -346,47 +397,61 @@ class foreman_proxy (
   $registered_proxy_url       = $foreman_proxy::params::registered_proxy_url,
   $oauth_effective_user       = $foreman_proxy::params::oauth_effective_user,
   $oauth_consumer_key         = $foreman_proxy::params::oauth_consumer_key,
-  $oauth_consumer_secret      = $foreman_proxy::params::oauth_consumer_secret
+  $oauth_consumer_secret      = $foreman_proxy::params::oauth_consumer_secret,
+  $puppet_use_cache           = $foreman_proxy::params::puppet_use_cache,
 ) inherits foreman_proxy::params {
 
-  # Port is deprecated
-  if $port {
-    warning("${::hostname}: foreman_proxy::port is deprecated; please use http_port or ssl_port instead")
-    $real_ssl        = $ssl
-    $real_http       = !$ssl
-    $real_http_port  = $port
-    $real_https_port = $port
-  } else {
-    $real_ssl        = $ssl
-    $real_http       = $http
-    $real_http_port  = $http_port
-    $real_https_port = $ssl_port
-  }
-
   # Validate misc params
-  validate_bool($ssl, $manage_sudoersd, $use_sudoersd, $register_in_foreman)
-  validate_array($trusted_hosts)
+  validate_string($bind_host)
+  validate_bool($ssl, $manage_sudoersd, $use_sudoersd, $register_in_foreman, $manage_puppet_group)
+  validate_array($trusted_hosts, $ssl_disabled_ciphers)
   validate_re($log_level, '^(UNKNOWN|FATAL|ERROR|WARN|INFO|DEBUG)$')
   validate_re($plugin_version, '^(installed|present|latest|absent)$')
+  validate_re($ensure_packages_version, '^(installed|present|latest|absent)$')
+  # lint:ignore:undef_in_function
+  validate_integer($log_buffer, undef, 0)
+  validate_integer($log_buffer_errors, undef, 0)
+  # lint:endignore
 
   # Validate puppet params
-  validate_bool($puppetssh_wait)
-  validate_string($ssldir, $puppetdir, $autosign_location, $puppetca_cmd, $puppetrun_cmd)
+  validate_bool($puppet, $puppetssh_wait)
+  validate_string($ssldir, $puppetdir, $puppetca_cmd, $puppetrun_cmd)
   validate_string($puppet_url, $puppet_ssl_ca, $puppet_ssl_cert, $puppet_ssl_key)
+  validate_string($mcollective_user, $salt_puppetrun_cmd)
+  if $puppet_use_cache != undef {
+    validate_bool($puppet_use_cache)
+  }
+  if $puppetrun_provider {
+    validate_string($puppetrun_provider)
+  }
 
   # Validate template params
   validate_string($template_url)
 
+  # Validate logs params
+  validate_bool($logs)
+  validate_listen_on($logs_listen_on)
+
   # Validate tftp params
-  validate_string($tftp_servername)
+  validate_bool($tftp_managed, $tftp_manage_wget)
+  if $tftp_servername {
+    validate_string($tftp_servername)
+  }
 
   # Validate dhcp params
   validate_bool($dhcp_managed)
   validate_array($dhcp_option_domain)
+  validate_integer($dhcp_omapi_port)
+  validate_string($dhcp_provider, $dhcp_server)
+  validate_array($dhcp_subnets)
 
   # Validate dns params
+  validate_bool($dns)
   validate_string($dns_interface, $dns_provider, $dns_reverse, $dns_server, $keyfile)
   validate_array($dns_forwarders)
+
+  # Validate libvirt params
+  validate_string($libvirt_network, $libvirt_connection)
 
   # Validate bmc params
   validate_re($bmc_default_provider, '^(freeipmi|ipmitool|shell)$')
@@ -395,6 +460,8 @@ class foreman_proxy (
   validate_bool($freeipa_remove_dns)
   validate_string($realm_provider, $realm_principal)
   validate_absolute_path($realm_keytab)
+
+  $real_registered_proxy_url = pick($registered_proxy_url, "https://${::fqdn}:${ssl_port}")
 
   # lint:ignore:spaceship_operator_without_tag
   class { '::foreman_proxy::install': } ~>

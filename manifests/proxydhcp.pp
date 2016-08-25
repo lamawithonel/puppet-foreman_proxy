@@ -30,12 +30,15 @@ class foreman_proxy::proxydhcp {
     interfaces  => [$foreman_proxy::dhcp_interface],
     pxeserver   => $ip,
     pxefilename => 'pxelinux.0',
+    omapi_name  => $foreman_proxy::dhcp_key_name,
+    omapi_key   => $foreman_proxy::dhcp_key_secret,
   }
 
   ::dhcp::pool{ $::domain:
-    network => $net,
-    mask    => $mask,
-    range   => $foreman_proxy::dhcp_range,
-    gateway => $foreman_proxy::dhcp_gateway,
+    network        => $net,
+    mask           => $mask,
+    range          => $foreman_proxy::dhcp_range,
+    gateway        => $foreman_proxy::dhcp_gateway,
+    search_domains => $foreman_proxy::dhcp_search_domains,
   }
 }
